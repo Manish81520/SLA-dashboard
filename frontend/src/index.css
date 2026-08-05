@@ -1,0 +1,245 @@
+@import "tailwindcss";
+
+@theme {
+  /* CGI Brand Identity Colors */
+  --color-primary: #2E1852;
+  --color-primary-light: #5136AA;
+  --color-primary-hover: #664383;
+  --color-accent-red: #CF2C43;
+
+  /* Neutral Palette */
+  --color-gray-50: #FAFAFA;
+  --color-gray-100: #F5F5F5;
+  --color-gray-200: #EEEEEE;
+  --color-gray-300: #D4D2D6;
+  --color-gray-400: #B7B4B9;
+  --color-gray-500: #8B8698;
+  --color-gray-600: #666666;
+  --color-gray-700: #4A4A4A;
+  --color-gray-900: #242321;
+
+  /* Semantic Colors */
+  --color-success: #22C55E;
+  --color-warning: #F59E0B;
+  --color-info: #3B82F6;
+  --color-error: #CF2C43;
+
+  /* Surface & Borders */
+  --color-canvas: #FAFAFA;
+  --color-surface: #FFFFFF;
+  --color-surface-header: #F5F5F5;
+  --color-border: #EEEEEE;
+  --color-border-dark: #D4D2D6;
+
+  /* Font family (drives Tailwind's `font-sans`) */
+  --font-sans: 'Roboto', sans-serif;
+
+  /* Type scale — must use the --text-* namespace, not --font-*,
+     since --font-* is reserved for font-family tokens in v4 */
+  --text-display-large: 56px;
+  --text-display-medium: 48px;
+  --text-h1: 40px;
+  --text-h2: 32px;
+  --text-h3: 28px;
+  --text-h4: 24px;
+  --text-title: 20px;
+  --text-body-large: 18px;
+  --text-body: 16px;
+  --text-small: 14px;
+  --text-caption: 12px;
+
+  /* Radii */
+  --radius-small: 4px;
+  --radius-input: 8px;
+  --radius-button: 8px;
+  --radius-card: 16px;
+  --radius-pill: 9999px;
+
+  /* Shadows */
+  --shadow-card: 0 4px 20px rgba(46, 24, 82, 0.05);
+  --shadow-card-hover: 0 8px 30px rgba(46, 24, 82, 0.08);
+  --shadow-dropdown: 0 10px 25px rgba(46, 24, 82, 0.12);
+  --shadow-subtle: 0 1px 3px rgba(36, 35, 33, 0.05);
+
+  /* Named spacing scale, additive to Tailwind's numeric scale */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 12px;
+  --spacing-lg: 16px;
+  --spacing-xl: 20px;
+  --spacing-xxl: 24px;
+  --spacing-xxxl: 32px;
+  --spacing-huge: 48px;
+}
+
+/* Tokens with no Tailwind utility equivalent — plain custom properties */
+:root {
+  --transition-default: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-fast: all 0.15s ease-in-out;
+
+  --z-base: 0;
+  --z-sticky: 10;
+  --z-header: 100;
+  --z-dropdown: 200;
+  --z-modal: 500;
+  --z-tooltip: 1000;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--font-sans);
+  background-color: var(--color-canvas);
+  color: var(--color-gray-900);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-gray-400);
+  border-radius: var(--radius-small);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-gray-500);
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.spin {
+  animation: spin 1s linear infinite;
+}
+
+/* Card Utility Class */
+.cgi-card {
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+  transition: var(--transition-default);
+}
+
+.cgi-card:hover {
+  box-shadow: var(--shadow-card-hover);
+}
+
+/* Button Utility Classes */
+.cgi-button-primary {
+  background-color: var(--color-primary);
+  color: #FFFFFF;
+  border-radius: var(--radius-button);
+  border: none;
+  font-family: var(--font-sans);
+  font-weight: 500;
+  font-size: var(--text-small);
+  padding: 10px 16px;
+  cursor: pointer;
+  transition: var(--transition-default);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cgi-button-primary:hover:not(:disabled) {
+  background-color: var(--color-primary-hover);
+}
+
+.cgi-button-danger {
+  background-color: var(--color-accent-red);
+  color: #FFFFFF;
+  border-radius: var(--radius-button);
+  border: none;
+  font-family: var(--font-sans);
+  font-weight: 500;
+  font-size: var(--text-small);
+  padding: 10px 16px;
+  cursor: pointer;
+  transition: var(--transition-default);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cgi-button-secondary {
+  background-color: #FFFFFF;
+  color: var(--color-gray-900);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-button);
+  font-family: var(--font-sans);
+  font-weight: 500;
+  font-size: var(--text-small);
+  padding: 10px 16px;
+  cursor: pointer;
+  transition: var(--transition-default);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cgi-button-secondary:hover:not(:disabled) {
+  border-color: var(--color-gray-300);
+  background-color: var(--color-gray-50);
+}
+
+/* Table Utilities */
+.cgi-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-sans);
+  font-size: var(--text-small);
+}
+
+.cgi-table th {
+  background-color: var(--color-gray-100);
+  color: var(--color-gray-700);
+  font-size: var(--text-caption);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--color-border-dark);
+}
+
+.cgi-table td {
+  padding: 12px 16px;
+  border-top: 1px solid var(--color-border);
+  color: var(--color-gray-900);
+}
+
+.cgi-table tr:hover {
+  background-color: var(--color-gray-50);
+}
