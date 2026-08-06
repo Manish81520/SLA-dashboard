@@ -47,7 +47,6 @@ export default function AnomalyWatchlist({ watchlist }) {
                                     className={`text-[10px] font-medium px-1.5 py-0.5 rounded-small inline-block mt-0.5 ${sev.className}`}
                                 >
                                     {sev.label}
-                                    {a.zScore != null ? ` · ${a.zScore}σ` : ''}
                                 </span>
                             </div>
                         </div>

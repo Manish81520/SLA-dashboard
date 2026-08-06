@@ -49,7 +49,7 @@ export default function PipelineStepper({ stages }) {
         })}
       </div>
       <p className="text-caption text-gray-600 mt-5 pt-4 border-t border-border">
-        "Anomaly" = more than 1 standard deviation above this stage's own average across all candidates — not a fixed target. Recalculated fresh from the current dataset.
+        Anomaly = More than 1 standard deviation above this stage's own average across all candidates.
       </p>
     </div>
   )
