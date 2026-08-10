@@ -11,6 +11,7 @@ export default function PipelineStepper({ stages }) {
           const hasAnomalies = stage.anomalyCount > 0
           const dotColor = hasAnomalies ? 'bg-accent-red' : 'bg-primary'
           const textColor = hasAnomalies ? 'text-accent-red' : 'text-primary'
+          const isLast = i === stages.length - 1
           return (
             <div key={stage.column} className="flex items-start flex-1">
               <div className="flex flex-col items-center flex-1 relative">
@@ -39,11 +40,12 @@ export default function PipelineStepper({ stages }) {
                   </p>
                 )}
               </div>
-              {i < stages.length - 1 && (
-                <div className="h-4 flex items-center flex-1 -mx-1 mt-2">
-                  <div className="h-[2px] w-full bg-border" />
-                </div>
-              )}
+              <div
+                className={`h-4 flex items-center flex-1 -mx-1 mt-2 ${isLast ? 'invisible' : ''}`}
+                aria-hidden="true"
+              >
+                <div className="h-[2px] w-full bg-border" />
+              </div>
             </div>
           )
         })}
