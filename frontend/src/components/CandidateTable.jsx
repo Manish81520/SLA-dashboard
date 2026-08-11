@@ -11,7 +11,7 @@ const DISPLAY_COLUMNS = [
   'CGI/External',
 ]
 
-export default function CandidateTable({ rows, stageLabels }) {
+export default function CandidateTable({ rows, stageLabels, onSelectCandidate }) {
   const [query, setQuery] = useState('')
 
   if (!rows) return null
@@ -63,9 +63,16 @@ export default function CandidateTable({ rows, stageLabels }) {
           </thead>
           <tbody>
             {filtered.map((row, idx) => (
-              <tr key={idx} className="border-t border-border hover:bg-gray-50 transition-colors">
+              <tr
+                key={idx}
+                onClick={() => onSelectCandidate?.(row)}
+                className={`group border-t border-border transition-colors ${onSelectCandidate ? 'cursor-pointer hover:bg-gray-50 active:bg-gray-100' : 'hover:bg-gray-50'}`}
+              >
                 {DISPLAY_COLUMNS.map((col) => (
-                  <td key={col} className="px-4 py-3 whitespace-nowrap text-gray-900">
+                  <td
+                    key={col}
+                    className={`px-4 py-3 whitespace-nowrap text-gray-900 ${col === 'Name' && onSelectCandidate ? 'group-hover:text-primary group-hover:underline' : ''}`}
+                  >
                     {row[col] ?? '—'}
                   </td>
                 ))}

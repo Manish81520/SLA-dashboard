@@ -9,6 +9,8 @@ import KpiCards from './components/KpiCards'
 import GraphSection from './components/GraphSection'
 import AnomalyWatchlist from './components/Anomalywatchlist'
 import CandidateTable from './components/CandidateTable'
+import CandidateSearchBar from './components/CandidateSearchBar'
+import CandidateDetail from './components/CandidateDetail'
 
 export default function App() {
   const [summary, setSummary] = useState(null)
@@ -17,10 +19,10 @@ export default function App() {
   const [error, setError] = useState(null)
   const [activeFilters, setActiveFilters] = useState({})
 
-  // Both the summary stats (KPIs, pipeline stepper, graphs, anomaly
-  // watchlist) and the candidate rows are recomputed on the backend from
-  // whatever filters are currently active, so the whole dashboard - not
-  // just the table - reflects the selected filters.
+  // 'dashboard' (filters + KPIs + table) or 'detail' (single candidate).
+  const [view, setView] = useState('dashboard')
+  const [selectedCandidate, setSelectedCandidate] = useState(null)
+
   const loadData = useCallback((filters) => {
     setLoading(true)
     setError(null)
@@ -45,6 +47,50 @@ export default function App() {
     loadData(activeFilters)
   }, [loadData, activeFilters])
 
+  // Resolves the current URL's ?candidate= param against the loaded rows so
+  // deep links and the browser back/forward buttons both work.
+  const applyCandidateFromUrl = useCallback((rows) => {
+    const params = new URLSearchParams(window.location.search)
+    const name = params.get('candidate')
+    if (name && rows) {
+      const match = rows.find((r) => r.Name === name)
+      if (match) {
+        setSelectedCandidate(match)
+        setView('detail')
+        return
+      }
+    }
+    setSelectedCandidate(null)
+    setView('dashboard')
+  }, [])
+
+  useEffect(() => {
+    if (candidates) applyCandidateFromUrl(candidates)
+  }, [candidates, applyCandidateFromUrl])
+
+  useEffect(() => {
+    const onPopState = () => applyCandidateFromUrl(candidates)
+    window.addEventListener('popstate', onPopState)
+    return () => window.removeEventListener('popstate', onPopState)
+  }, [candidates, applyCandidateFromUrl])
+
+  const handleSelectCandidate = (candidate) => {
+    setSelectedCandidate(candidate)
+    setView('detail')
+    const params = new URLSearchParams(window.location.search)
+    params.set('candidate', candidate.Name)
+    window.history.pushState({}, '', `${window.location.pathname}?${params.toString()}`)
+  }
+
+  const handleBackToSearch = () => {
+    setSelectedCandidate(null)
+    setView('dashboard')
+    const params = new URLSearchParams(window.location.search)
+    params.delete('candidate')
+    const query = params.toString()
+    window.history.pushState({}, '', `${window.location.pathname}${query ? `?${query}` : ''}`)
+  }
+
   const stageLabels = useMemo(() => summary?.stages.map((s) => s.label) ?? [], [summary])
 
   return (
@@ -60,7 +106,13 @@ export default function App() {
         </div>
 
         <div className="flex items-center gap-3 shrink-0">
-          <FileUpload dataset={summary?.dataset} onUploaded={() => loadData(activeFilters)} />
+          <FileUpload
+            dataset={summary?.dataset}
+            onUploaded={() => {
+              handleBackToSearch()
+              loadData(activeFilters)
+            }}
+          />
           <a
             href={exportUrl}
             className="hidden sm:flex items-center gap-2 bg-primary text-white text-small font-medium px-4 py-2.5 rounded-button no-underline shadow-subtle hover:bg-primary-hover transition-colors"
@@ -71,14 +123,18 @@ export default function App() {
         </div>
       </header>
 
-      {summary?.filters && (
+      {/* Filter/search section is dashboard-only, per spec. */}
+      {summary?.filters && view === 'dashboard' && (
         <div className="px-4 sm:px-8 py-3 border-b border-border bg-surface">
-          <FilterBar
-            filters={summary.filters}
-            activeFilters={activeFilters}
-            onFilterChange={(key, val) => setActiveFilters((prev) => ({ ...prev, [key]: val }))}
-            onClearFilters={() => setActiveFilters({})}
-          />
+          <div className="flex items-center gap-3 flex-wrap">
+            <FilterBar
+              filters={summary.filters}
+              activeFilters={activeFilters}
+              onFilterChange={(key, val) => setActiveFilters((prev) => ({ ...prev, [key]: val }))}
+              onClearFilters={() => setActiveFilters({})}
+            />
+            <CandidateSearchBar candidates={candidates} onSelectCandidate={handleSelectCandidate} />
+          </div>
         </div>
       )}
 
@@ -107,34 +163,53 @@ export default function App() {
 
         {!loading && !error && summary && (
           <div className="flex flex-col gap-5 max-w-[1500px] mx-auto">
-            {summary.kpis.dataQualityIssues > 0 && (
-              <div className="flex items-start gap-2 bg-gray-100 border-l-4 border-accent-red text-accent-red text-small px-4 py-3.5 rounded-button">
-                <ShieldAlert size={18} className="mt-0.5 shrink-0" />
-                <div>
-                  <p className="font-semibold m-0">
-                    {summary.kpis.dataQualityIssues} value(s) excluded from averages as bad data
-                  </p>
-                  <p className="text-caption text-gray-600 mt-0.5 m-0">
-                    {Object.entries(summary.dataQuality)
-                      .map(([label, count]) => `${label}: ${count}`)
-                      .join(' · ')}
-                    {' — negative or implausibly large values, likely a parsing issue in the source CSV.'}
-                  </p>
+            {view === 'detail' && selectedCandidate ? (
+              <CandidateDetail
+                candidate={selectedCandidate}
+                stages={summary.stages}
+                kpis={summary.kpis}
+                onBack={handleBackToSearch}
+              />
+            ) : (
+              <>
+                {summary.kpis.dataQualityIssues > 0 && (
+                  <div className="flex items-start gap-2 bg-gray-100 border-l-4 border-accent-red text-accent-red text-small px-4 py-3.5 rounded-button">
+                    <ShieldAlert size={18} className="mt-0.5 shrink-0" />
+                    <div>
+                      <p className="font-semibold m-0">
+                        {summary.kpis.dataQualityIssues} value(s) excluded from averages as bad data
+                      </p>
+                      <p className="text-caption text-gray-600 mt-0.5 m-0">
+                        {Object.entries(summary.dataQuality)
+                          .map(([label, count]) => `${label}: ${count}`)
+                          .join(' · ')}
+                        {' — negative or implausibly large values, likely a parsing issue in the source CSV.'}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                <KpiCards kpis={summary.kpis} />
+
+                <PipelineStepper stages={summary.stages} />
+
+                <GraphSection stages={summary.stages} byGroup={summary.byGroup} />
+
+                <div className="h-[420px]">
+                  <AnomalyWatchlist
+                    watchlist={summary.anomalyWatchlist}
+                    candidates={candidates}
+                    onSelectCandidate={handleSelectCandidate}
+                  />
                 </div>
-              </div>
+
+                <CandidateTable
+                  rows={candidates ?? []}
+                  stageLabels={stageLabels}
+                  onSelectCandidate={handleSelectCandidate}
+                />
+              </>
             )}
-
-            <KpiCards kpis={summary.kpis} />
-
-            <PipelineStepper stages={summary.stages} />
-
-            <GraphSection stages={summary.stages} byGroup={summary.byGroup} />
-
-            <div className="h-[420px]">
-              <AnomalyWatchlist watchlist={summary.anomalyWatchlist} />
-            </div>
-
-            <CandidateTable rows={candidates ?? []} stageLabels={stageLabels} />
           </div>
         )}
       </main>
