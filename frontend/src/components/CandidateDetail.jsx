@@ -26,6 +26,17 @@ function round1(n) {
     return Math.round(n * 10) / 10
 }
 
+function formatStageDeviationLabel(deviation) {
+    const rounded = Math.round(deviation)
+    if (rounded === 0) {
+        return { label: 'On Track', tone: 'neutral' }
+    }
+    if (rounded > 0) {
+        return { label: `Ahead by ${rounded}d`, tone: 'ahead' }
+    }
+    return { label: `Behind by ${Math.abs(rounded)}d`, tone: 'behind' }
+}
+
 function MetaPill({ icon: Icon, label }) {
     return (
         <span className="flex items-center gap-1.5 text-caption text-gray-600">
@@ -83,14 +94,20 @@ function CandidateStageProgress({ stageRows }) {
                                 <p className="text-caption text-center text-gray-700 font-medium leading-tight px-1 max-w-[110px]">
                                     {s.label}
                                 </p>
-                                {s.deviation != null && (
-                                    <span
-                                        className={`text-[10px] font-medium px-1.5 py-0.5 rounded-small mt-1 ${s.deviation >= 0 ? 'bg-success/10 text-success' : 'bg-gray-100 text-accent-red'
-                                            }`}
-                                    >
-                                        {s.deviation >= 0 ? `Ahead by ${s.deviation}d` : `Behind by ${Math.abs(s.deviation)}d`}
-                                    </span>
-                                )}
+                                {s.deviation != null && (() => {
+                                    const { label, tone } = formatStageDeviationLabel(s.deviation)
+                                    const toneClass =
+                                        tone === 'ahead'
+                                            ? 'bg-success/10 text-success'
+                                            : tone === 'behind'
+                                                ? 'bg-gray-100 text-accent-red'
+                                                : 'bg-gray-100 text-gray-600'
+                                    return (
+                                        <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-small mt-1 ${toneClass}`}>
+                                            {label}
+                                        </span>
+                                    )
+                                })()}
                             </div>
                             {/* Connector always renders (invisible on the last stage) so every
                                 stage's content box stays the same width — same fix as PipelineStepper. */}
