@@ -196,10 +196,18 @@ export default function App() {
                 <GraphSection stages={summary.stages} byGroup={summary.byGroup} />
 
                 <div className="h-[420px]">
-                  <AnomalyWatchlist watchlist={summary.anomalyWatchlist} />
+                  <AnomalyWatchlist
+                    watchlist={summary.anomalyWatchlist}
+                    candidates={candidates}
+                    onSelectCandidate={handleSelectCandidate}
+                  />
                 </div>
 
-                <CandidateTable rows={candidates ?? []} stageLabels={stageLabels} />
+                <CandidateTable
+                  rows={candidates ?? []}
+                  stageLabels={stageLabels}
+                  onSelectCandidate={handleSelectCandidate}
+                />
               </>
             )}
           </div>

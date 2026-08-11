@@ -6,8 +6,14 @@ function severityStyle(zScore) {
     return { label: 'Elevated', className: 'bg-gray-100 text-accent-red' }
 }
 
-export default function AnomalyWatchlist({ watchlist }) {
+export default function AnomalyWatchlist({ watchlist, candidates, onSelectCandidate }) {
     if (!watchlist) return null
+
+    const handleSelect = (candidateName) => {
+        if (!onSelectCandidate || !candidates) return
+        const match = candidates.find((c) => c.Name === candidateName)
+        if (match) onSelectCandidate(match)
+    }
 
     if (watchlist.length === 0) {
         return (
@@ -30,13 +36,19 @@ export default function AnomalyWatchlist({ watchlist }) {
             <div className="overflow-y-auto flex-1">
                 {watchlist.map((a, i) => {
                     const sev = severityStyle(a.zScore)
+                    const isClickable = Boolean(onSelectCandidate && candidates?.some((c) => c.Name === a.candidate))
                     return (
-                        <div
+                        <button
                             key={i}
-                            className={`px-5 py-3.5 flex items-center justify-between gap-3 ${i > 0 ? 'border-t border-border' : ''}`}
+                            type="button"
+                            onClick={() => handleSelect(a.candidate)}
+                            disabled={!isClickable}
+                            className={`group w-full px-5 py-3.5 flex items-center justify-between gap-3 text-left transition-colors ${i > 0 ? 'border-t border-border' : ''} ${isClickable ? 'cursor-pointer hover:bg-gray-50 active:bg-gray-100' : 'cursor-default'}`}
                         >
                             <div className="min-w-0">
-                                <p className="text-small font-medium text-gray-900 m-0 truncate">{a.candidate}</p>
+                                <p className={`text-small font-medium m-0 truncate ${isClickable ? 'text-gray-900 group-hover:text-primary group-hover:underline' : 'text-gray-900'}`}>
+                                    {a.candidate}
+                                </p>
                                 <p className="text-caption text-gray-600 m-0 truncate">
                                     {a.team} · {a.stage}
                                 </p>
@@ -49,7 +61,7 @@ export default function AnomalyWatchlist({ watchlist }) {
                                     {sev.label}
                                 </span>
                             </div>
-                        </div>
+                        </button>
                     )
                 })}
             </div>
