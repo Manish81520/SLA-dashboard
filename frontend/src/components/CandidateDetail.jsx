@@ -23,7 +23,7 @@ function initials(name) {
 }
 
 function round1(n) {
-    return Math.round(n * 10) / 10
+    return Math.round(n)
 }
 
 function formatStageDeviationLabel(deviation) {

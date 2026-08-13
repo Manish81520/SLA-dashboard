@@ -7,6 +7,7 @@ import FilterBar from './components/FilterBar'
 import FileUpload from './components/Fileupload'
 import KpiCards from './components/KpiCards'
 import GraphSection from './components/GraphSection'
+import FocusAreas from './components/FocusAreas'
 import AnomalyWatchlist from './components/Anomalywatchlist'
 import CandidateTable from './components/CandidateTable'
 import CandidateSearchBar from './components/CandidateSearchBar'
@@ -193,14 +194,23 @@ export default function App() {
 
                 <PipelineStepper stages={summary.stages} />
 
-                <GraphSection stages={summary.stages} byGroup={summary.byGroup} />
+                <FocusAreas
+                  focusAreas={summary.focusAreas}
+                  candidates={candidates}
+                  onSelectCandidate={handleSelectCandidate}
+                />
 
-                <div className="h-[420px]">
-                  <AnomalyWatchlist
-                    watchlist={summary.anomalyWatchlist}
-                    candidates={candidates}
-                    onSelectCandidate={handleSelectCandidate}
-                  />
+                <div className="grid grid-cols-1 xl:grid-cols-[2fr_1fr] gap-5 items-stretch">
+                  <GraphSection stages={summary.stages} byGroup={summary.byGroup} />
+
+                  <div className="min-h-[420px] xl:h-full">
+                    <AnomalyWatchlist
+                      watchlist={summary.anomalyWatchlist}
+                      stages={summary.stages}
+                      candidates={candidates}
+                      onSelectCandidate={handleSelectCandidate}
+                    />
+                  </div>
                 </div>
 
                 <CandidateTable
