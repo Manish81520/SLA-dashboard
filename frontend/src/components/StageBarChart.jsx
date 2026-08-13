@@ -15,49 +15,6 @@ import { theme } from '../theme'
 const ONTRACK = theme.colors.primary
 const ANOMALY = theme.colors.accentRed
 
-// Custom pill-style label for the average reference line, used only in the
-// "embedded" (Graph Section) variant to match the CGI dashboard reference.
-function AverageLabel({ viewBox, value }) {
-  if (!viewBox) return null
-  const width = 124
-  const height = 34
-  const x = viewBox.x + viewBox.width - width
-  const y = viewBox.y - height / 2
-
-  return (
-    <g>
-      <rect
-        x={x}
-        y={y}
-        width={width}
-        height={height}
-        rx={8}
-        fill={theme.colors.gray100}
-        stroke={theme.colors.border}
-      />
-      <text
-        x={x + 12}
-        y={y + height / 2 - 4}
-        fontSize="9"
-        fontFamily={theme.typography.fontFamily}
-        fill={theme.colors.gray600}
-      >
-        Average
-      </text>
-      <text
-        x={x + 12}
-        y={y + height / 2 + 11}
-        fontSize="12"
-        fontWeight="700"
-        fontFamily={theme.typography.fontFamily}
-        fill={theme.colors.primary}
-      >
-        {value} Days
-      </text>
-    </g>
-  )
-}
-
 /**
  * variant="card" (default): the original self-contained mini card used by
  * the grid layout below — unchanged behavior, including anomaly (red)
@@ -84,7 +41,7 @@ export function MiniStageChart({ stage, byGroup, variant = 'card' }) {
       <ResponsiveContainer width="100%" height={embedded ? 320 : 160}>
         <BarChart
           data={data}
-          margin={embedded ? { top: 28, right: 16, left: 0, bottom: 0 } : { top: 8, right: 8, left: -18, bottom: 0 }}
+          margin={embedded ? { top: 20, right: 16, left: 0, bottom: 0 } : { top: 8, right: 8, left: -18, bottom: 0 }}
         >
           <CartesianGrid strokeDasharray="3 3" stroke={theme.colors.border} vertical={false} />
           <XAxis
@@ -117,7 +74,7 @@ export function MiniStageChart({ stage, byGroup, variant = 'card' }) {
               strokeDasharray={embedded ? '5 5' : '4 4'}
               label={
                 embedded
-                  ? <AverageLabel value={stage.average} />
+                  ? undefined
                   : {
                     value: 'global avg',
                     position: 'insideTopRight',
