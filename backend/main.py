@@ -4,6 +4,12 @@ Reads the onboarding tracker CSV (uploaded by the user, not a hardcoded local
 path) and computes everything the dashboard needs directly from the data
 itself - no hardcoded day-count targets. "Normal" for each stage is defined
 by the stage's own global average and spread, computed fresh each time.
+
+Rounding policy: every internal computation (averages, std dev, anomaly
+cutoffs, deviations, z-scores, focus-area thresholds) is done on raw,
+unrounded floats so comparisons stay accurate. Values are only rounded to
+whole numbers at the very end, right before they go into a JSON response -
+see `round_out()`.
 """
 import io
 import re
@@ -53,6 +59,7 @@ STAGE_CONFIG = [
 GROUP_BY_COLUMN = "Project Details"
 TOTAL_DURATION_COLUMN = "Complete Onboarding"
 NAME_COLUMN = "Name"
+COMPLETION_DATE_COLUMN = "Onboarding Completion Date"
 
 FILTER_COLUMNS = ["Project Details", "Location", "Status", "CGI/External", "BGV Status"]
 
@@ -67,6 +74,29 @@ MAX_PLAUSIBLE_DAYS = 365
 # How far above the global average counts as an anomaly, in standard
 # deviations. 1.0 = flag anything meaningfully worse than typical.
 ANOMALY_Z = 1.0
+
+# A candidate is a "focus area" for a stage once they've used up this
+# fraction of the stage's own global average - i.e. approaching, but not
+# yet past, the anomaly cutoff. Only candidates who haven't completed
+# onboarding yet are eligible (there's nothing to "focus on" for someone
+# already done), and anything past the anomaly cutoff is excluded here so a
+# candidate is never counted as both a focus area and an anomaly for the
+# same stage.
+FOCUS_AREA_THRESHOLD = 0.75
+
+
+def round_out(value):
+    """Round a raw numeric value to a whole number for JSON output. Returns
+    None for missing/NaN values so the frontend's existing null-handling
+    ('—' placeholders etc.) keeps working unchanged."""
+    if value is None:
+        return None
+    try:
+        if pd.isna(value):
+            return None
+    except (TypeError, ValueError):
+        pass
+    return int(round(float(value)))
 
 
 def normalize(name: str) -> str:
@@ -137,11 +167,27 @@ def apply_filters(df: pd.DataFrame, filters: dict) -> pd.DataFrame:
     return df
 
 
+def is_onboarding_complete(row: pd.Series) -> bool:
+    """A candidate counts as 'done' if they have a completion date, or -
+    falling back for datasets without that column - a non-null total
+    onboarding duration."""
+    if COMPLETION_DATE_COLUMN in row.index:
+        val = row.get(COMPLETION_DATE_COLUMN)
+        if pd.notna(val) and str(val).strip() != "":
+            return True
+        return False
+    if TOTAL_DURATION_COLUMN in row.index:
+        return pd.notna(row.get(TOTAL_DURATION_COLUMN))
+    return False
+
+
 def stage_stats(df: pd.DataFrame) -> dict:
     """Global average + std dev per stage, computed fresh from the cleaned
-    data. This is the whole basis for what counts as an anomaly. When
-    filters are active, `df` is already narrowed to the selected subset, so
-    stats reflect that subset rather than the whole dataset."""
+    data, kept as raw (unrounded) floats - this is the whole basis for what
+    counts as an anomaly or a focus area, and rounding it early would let
+    borderline cases fall on the wrong side of a cutoff. When filters are
+    active, `df` is already narrowed to the selected subset, so stats
+    reflect that subset rather than the whole dataset."""
     stats = {}
     for stage in STAGE_CONFIG:
         col = stage["column"]
@@ -154,9 +200,9 @@ def stage_stats(df: pd.DataFrame) -> dict:
         avg = float(valid.mean())
         std = float(valid.std()) if len(valid) > 1 else 0.0
         stats[stage["label"]] = {
-            "average": round(avg, 1),
-            "std": round(std, 1),
-            "anomalyCutoff": round(avg + ANOMALY_Z * std, 1),
+            "average": avg,
+            "std": std,
+            "anomalyCutoff": avg + ANOMALY_Z * std,
         }
     return stats
 
@@ -185,7 +231,7 @@ def build_candidate_records(df: pd.DataFrame, stats: dict) -> list[dict]:
                 anomalies[label] = None
                 stage_values[label] = None
             else:
-                stage_values[label] = int(val) if float(val).is_integer() else float(val)
+                stage_values[label] = round_out(val)
                 anomalies[label] = bool(cutoff is not None and val > cutoff)
         record["_anomalies"] = anomalies
         record["_stageValues"] = stage_values
@@ -212,19 +258,65 @@ def build_anomaly_watchlist(df: pd.DataFrame, stats: dict) -> list[dict]:
             if col not in df.columns or pd.isna(val) or cutoff is None or val <= cutoff:
                 continue
             deviation = float(val) - avg
-            z_score = round(deviation / std, 1) if std else None
+            z_score = deviation / std if std else None
             watchlist.append({
                 "candidate": str(row[name_col]) if name_col else "Unknown",
                 "team": str(row[group_col]) if group_col else "Unspecified",
                 "stage": label,
-                "value": int(val) if float(val).is_integer() else float(val),
-                "average": avg,
-                "deviation": round(deviation, 1),
-                "zScore": z_score,
+                "value": round_out(val),
+                "average": round_out(avg),
+                "deviation": round_out(deviation),
+                "zScore": round_out(z_score),
+                "_sortDeviation": deviation,
             })
 
-    watchlist.sort(key=lambda x: x["deviation"], reverse=True)
+    watchlist.sort(key=lambda x: x["_sortDeviation"], reverse=True)
+    for entry in watchlist:
+        del entry["_sortDeviation"]
     return watchlist
+
+
+def build_focus_areas(df: pd.DataFrame, stats: dict) -> list[dict]:
+    """Candidates who are trending toward - but haven't yet crossed - a
+    stage's anomaly cutoff, so this can act as an early-warning list rather
+    than an after-the-fact one. Only candidates still mid-onboarding are
+    eligible (nothing to focus on once someone's finished), and anything at
+    or past the anomaly cutoff is excluded so a candidate never shows up as
+    both a focus area and an anomaly for the same stage."""
+    focus_areas = []
+    name_col = NAME_COLUMN if NAME_COLUMN in df.columns else None
+    group_col = GROUP_BY_COLUMN if GROUP_BY_COLUMN in df.columns else None
+
+    for _, row in df.iterrows():
+        if is_onboarding_complete(row):
+            continue
+        for stage in STAGE_CONFIG:
+            col = stage["column"]
+            label = stage["label"]
+            info = stats.get(label, {})
+            avg = info.get("average")
+            cutoff = info.get("anomalyCutoff")
+            val = row.get(col)
+            if col not in df.columns or pd.isna(val) or avg is None or cutoff is None or avg <= 0:
+                continue
+            threshold = FOCUS_AREA_THRESHOLD * avg
+            if val < threshold or val > cutoff:
+                continue
+            percent_of_average = (float(val) / avg) * 100
+            focus_areas.append({
+                "candidate": str(row[name_col]) if name_col else "Unknown",
+                "team": str(row[group_col]) if group_col else "Unspecified",
+                "stage": label,
+                "value": round_out(val),
+                "average": round_out(avg),
+                "percentOfAverage": round_out(percent_of_average),
+                "_sortPercent": percent_of_average,
+            })
+
+    focus_areas.sort(key=lambda x: x["_sortPercent"], reverse=True)
+    for entry in focus_areas:
+        del entry["_sortPercent"]
+    return focus_areas
 
 
 @app.get("/api/candidates")
@@ -238,8 +330,9 @@ def get_candidates(request: Request):
 @app.get("/api/summary")
 def get_summary(request: Request):
     """Global average per stage, team (Project Details) averages against
-    that global average, anomaly counts, and a ranked anomaly watchlist -
-    all derived from the (optionally filtered) data, no fixed targets.
+    that global average, anomaly counts, a ranked anomaly watchlist, and a
+    ranked focus-areas list - all derived from the (optionally filtered)
+    data, no fixed targets.
 
     Filter dropdown option lists (`filters` in the response) are always
     built from the FULL, unfiltered dataset so previously-available options
@@ -261,12 +354,12 @@ def get_summary(request: Request):
             label = stage["label"]
             if col not in df.columns:
                 continue
-            avg = sub[col].mean()
-            team_avg = None if pd.isna(avg) else round(float(avg), 1)
-            entry[label] = team_avg
+            raw_team_avg = sub[col].mean()
+            team_avg = None if pd.isna(raw_team_avg) else float(raw_team_avg)
+            entry[label] = round_out(team_avg)
             global_avg = stats.get(label, {}).get("average")
             entry[f"{label}__vsAvg"] = (
-                round(team_avg - global_avg, 1) if team_avg is not None and global_avg is not None else None
+                round_out(team_avg - global_avg) if team_avg is not None and global_avg is not None else None
             )
         by_group.append(entry)
 
@@ -284,9 +377,9 @@ def get_summary(request: Request):
         stage_summary.append({
             "label": label,
             "column": col,
-            "average": stats.get(label, {}).get("average"),
-            "std": stats.get(label, {}).get("std"),
-            "anomalyCutoff": cutoff,
+            "average": round_out(stats.get(label, {}).get("average")),
+            "std": round_out(stats.get(label, {}).get("std")),
+            "anomalyCutoff": round_out(cutoff),
             "anomalyCount": anomaly_count,
             "trackedCount": int(len(valid)),
             "excludedBadData": data_quality.get(label, 0),
@@ -297,7 +390,7 @@ def get_summary(request: Request):
         "totalAnomalies": total_anomalies,
         "projectGroups": int(df[GROUP_BY_COLUMN].nunique()) if GROUP_BY_COLUMN in df.columns else 0,
         "avgTotalOnboardingDays": (
-            round(float(df[TOTAL_DURATION_COLUMN].dropna().mean()), 1)
+            round_out(df[TOTAL_DURATION_COLUMN].dropna().mean())
             if TOTAL_DURATION_COLUMN in df.columns and not df[TOTAL_DURATION_COLUMN].dropna().empty
             else None
         ),
@@ -318,6 +411,7 @@ def get_summary(request: Request):
         "activeFilters": active_filters,
         "dataQuality": data_quality,
         "anomalyWatchlist": build_anomaly_watchlist(df, stats),
+        "focusAreas": build_focus_areas(df, stats),
         "dataset": DATASET_INFO,
     }
 
