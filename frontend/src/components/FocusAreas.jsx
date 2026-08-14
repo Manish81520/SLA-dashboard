@@ -21,9 +21,6 @@ export default function FocusAreas({ focusAreas, candidates, onSelectCandidate }
         )
     }
 
-    // Count how many people are approaching the average, per stage, and
-    // surface the worst four as quick-glance cards (matches the reference
-    // "Focus Areas" strip design).
     const counts = {}
     focusAreas.forEach((f) => {
         counts[f.stage] = (counts[f.stage] || 0) + 1
@@ -35,8 +32,6 @@ export default function FocusAreas({ focusAreas, candidates, onSelectCandidate }
 
     const handleCardClick = (stage) => {
         if (stage === activeStage) {
-            // Second click on the same card collapses the panel instead of
-            // falling back to the unfiltered "all stages" list.
             setExpanded(false)
             setActiveStage(null)
             return
@@ -77,8 +72,8 @@ export default function FocusAreas({ focusAreas, candidates, onSelectCandidate }
                         type="button"
                         onClick={() => handleCardClick(stage)}
                         className={`flex items-center justify-between gap-3 min-w-[220px] text-left px-4 py-3 rounded-button border transition-colors ${activeStage === stage
-                                ? 'border-primary bg-primary/5'
-                                : 'border-accent-red/20 bg-accent-red/5 hover:bg-accent-red/10'
+                            ? 'border-primary bg-primary/5'
+                            : 'border-accent-red/20 bg-accent-red/5 hover:bg-accent-red/10'
                             }`}
                     >
                         <div className="flex items-center gap-3 min-w-0">
@@ -88,7 +83,11 @@ export default function FocusAreas({ focusAreas, candidates, onSelectCandidate }
                                 <p className="text-caption text-gray-500 m-0">Approaching SLA breach</p>
                             </div>
                         </div>
-                        <ChevronRight size={16} className="text-gray-400 shrink-0" />
+                        {expanded && activeStage === stage ? (
+                            <ChevronDown size={16} className="text-primary shrink-0" />
+                        ) : (
+                            <ChevronRight size={16} className="text-gray-400 shrink-0" />
+                        )}
                     </button>
                 ))}
 
@@ -105,7 +104,7 @@ export default function FocusAreas({ focusAreas, candidates, onSelectCandidate }
                             Focus Areas
                         </span>
                     </div>
-                    {expanded ? (
+                    {expanded && !activeStage ? (
                         <ChevronDown size={16} className="text-primary shrink-0" />
                     ) : (
                         <ChevronRight size={16} className="text-primary shrink-0" />
@@ -115,7 +114,7 @@ export default function FocusAreas({ focusAreas, candidates, onSelectCandidate }
 
             {/* Full list only renders once the user taps to expand it. */}
             {expanded && (
-                <div className="border-t border-border max-h-80 overflow-y-auto">
+                <div className="border-t border-border max-h-80 overflow-y-auto overscroll-contain">
                     {visibleList.map((f, i) => {
                         const isClickable = Boolean(onSelectCandidate && candidates?.some((c) => c.Name === f.candidate))
                         return (

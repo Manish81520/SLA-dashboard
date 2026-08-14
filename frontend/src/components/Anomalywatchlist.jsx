@@ -10,8 +10,6 @@ function severityStyle(zScore) {
 export default function AnomalyWatchlist({ watchlist, stages, candidates, onSelectCandidate }) {
     const [activeStage, setActiveStage] = useState(stages?.[0]?.label ?? null)
 
-    // Keep the selection valid if `stages` arrives/changes after mount
-    // (e.g. filters narrow the dataset) - same pattern as Graph Section.
     useEffect(() => {
         if (stages && stages.length > 0 && !stages.some((s) => s.label === activeStage)) {
             setActiveStage(stages[0].label)
@@ -65,7 +63,7 @@ export default function AnomalyWatchlist({ watchlist, stages, candidates, onSele
                     <p className="text-caption text-gray-600 mt-1 m-0">This stage is within 1σ of its own average.</p>
                 </div>
             ) : (
-                <div className="overflow-y-auto flex-1">
+                <div className="overflow-y-auto overscroll-contain flex-1 max-h-[384px]">
                     {filtered.map((a, i) => {
                         const sev = severityStyle(a.zScore)
                         const isClickable = Boolean(onSelectCandidate && candidates?.some((c) => c.Name === a.candidate))
