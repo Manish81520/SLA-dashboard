@@ -93,6 +93,7 @@ export default function App() {
   }
 
   const stageLabels = useMemo(() => summary?.stages.map((s) => s.label) ?? [], [summary])
+  const hasManyTeams = useMemo(() => (summary?.byGroup?.length ?? 0) > 6, [summary])
 
   return (
     <div className="min-h-screen bg-canvas text-gray-900">
@@ -200,10 +201,10 @@ export default function App() {
                   onSelectCandidate={handleSelectCandidate}
                 />
 
-                <div className="grid grid-cols-1 xl:grid-cols-[2fr_1fr] gap-5 items-stretch">
+                <div className={`grid grid-cols-1 gap-5 items-stretch ${hasManyTeams ? '' : 'xl:grid-cols-[2fr_1fr]'}`}>
                   <GraphSection stages={summary.stages} byGroup={summary.byGroup} />
 
-                  <div className="min-h-[420px] xl:h-full">
+                  <div className={hasManyTeams ? 'min-h-[420px]' : 'min-h-[420px] xl:h-full'}>
                     <AnomalyWatchlist
                       watchlist={summary.anomalyWatchlist}
                       stages={summary.stages}

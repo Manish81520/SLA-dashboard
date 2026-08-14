@@ -26,7 +26,7 @@ export default function CandidateTable({ rows, stageLabels, onSelectCandidate })
   return (
     <div className="bg-surface border border-border rounded-card shadow-card overflow-hidden">
       <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-gray-50">
-        <p className="text-caption uppercase tracking-wider text-gray-700 font-semibold">
+        <p className="text-caption uppercase tracking-wider text-gray-900 font-semibold">
           Candidate Detail ({filtered.length})
         </p>
         <div className="flex items-center gap-2">
@@ -55,7 +55,7 @@ export default function CandidateTable({ rows, stageLabels, onSelectCandidate })
       </div>
 
       {expanded && (
-        <div className="overflow-x-auto max-h-[480px]">
+        <div className="overflow-x-auto overscroll-contain max-h-[480px]">
           <table className="w-full text-small">
             <thead className="sticky top-0 bg-gray-100 z-10">
               <tr>
