@@ -34,8 +34,14 @@ export default function FocusAreas({ focusAreas, candidates, onSelectCandidate }
         .map(([stage, count]) => ({ stage, count }))
 
     const handleCardClick = (stage) => {
-        const next = stage === activeStage ? null : stage
-        setActiveStage(next)
+        if (stage === activeStage) {
+            // Second click on the same card collapses the panel instead of
+            // falling back to the unfiltered "all stages" list.
+            setExpanded(false)
+            setActiveStage(null)
+            return
+        }
+        setActiveStage(stage)
         setExpanded(true)
     }
 
