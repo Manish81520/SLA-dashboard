@@ -136,6 +136,10 @@ function MetricRow({ icon: Icon, label, value, tone = 'default' }) {
 }
 
 function KeyMetrics({ totalDays, avgDays, deviation, anomalyCount }) {
+    const deviationDisplay = deviation != null ? formatStageDeviationLabel(deviation) : null
+    const deviationTone =
+        deviationDisplay?.tone === 'ahead' ? 'success' : deviationDisplay?.tone === 'behind' ? 'breach' : 'default'
+
     return (
         <div className="bg-surface border border-border rounded-card shadow-card p-6 flex flex-col gap-4">
             <p className="text-title font-bold text-gray-900 m-0">Key Metrics Summary</p>
@@ -143,9 +147,9 @@ function KeyMetrics({ totalDays, avgDays, deviation, anomalyCount }) {
             <MetricRow icon={Layers} label="Team Average" value={avgDays != null ? `${avgDays} days` : '—'} />
             <MetricRow
                 icon={deviation != null && deviation < 0 ? TrendingDown : TrendingUp}
-                label="Deviation from Average"
-                value={deviation != null ? `${deviation >= 0 ? '+' : ''}${deviation} days` : '—'}
-                tone={deviation != null ? (deviation >= 0 ? 'success' : 'breach') : 'default'}
+                label="Pace vs Team Average"
+                value={deviationDisplay ? deviationDisplay.label : '—'}
+                tone={deviationTone}
             />
             <MetricRow
                 icon={AlertTriangle}
