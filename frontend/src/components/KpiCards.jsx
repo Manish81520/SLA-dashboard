@@ -1,5 +1,4 @@
-import { Users, AlertTriangle, Layers, Clock, ShieldAlert } from 'lucide-react'
-import { theme } from '../theme'
+import { Users, TrendingDown, TrendingUp, Clock, ShieldAlert } from 'lucide-react'
 
 function Card({ icon: Icon, label, value, tone = 'default' }) {
   const toneColors = {
@@ -22,19 +21,10 @@ export default function KpiCards({ kpis }) {
   if (!kpis) return null
   return (
     <div className="flex gap-4 flex-wrap">
-      <Card icon={Users} label="Candidates Tracked" value={kpis.totalCandidates} />
-      <Card
-        icon={AlertTriangle}
-        label="Statistical Anomalies"
-        value={kpis.totalAnomalies}
-        tone={kpis.totalAnomalies > 0 ? 'breach' : 'ontrack'}
-      />
-      <Card icon={Layers} label="Project Groups" value={kpis.projectGroups} />
-      <Card
-        icon={Clock}
-        label="Avg. Total Onboarding Days"
-        value={kpis.avgTotalOnboardingDays ?? '—'}
-      />
+      <Card icon={Users} label="Partners Onboarded" value={kpis.totalCandidates} />
+      <Card icon={TrendingDown} label="Min Days for Onboarding" value={kpis.minTotalOnboardingDays ?? '—'} />
+      <Card icon={TrendingUp} label="Max Days for Onboarding" value={kpis.maxTotalOnboardingDays ?? '—'} />
+      <Card icon={Clock} label="Avg. Total Onboarding Days" value={kpis.avgTotalOnboardingDays ?? '—'} />
       {kpis.dataQualityIssues > 0 && (
         <Card
           icon={ShieldAlert}

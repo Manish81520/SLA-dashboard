@@ -192,7 +192,7 @@ export default function App() {
 
                 <KpiCards kpis={summary.kpis} />
 
-                <PipelineStepper stages={summary.stages} />
+                <PipelineStepper stageGroups={summary.stageGroups} />
 
                 <FocusAreas
                   focusAreas={summary.focusAreas}
