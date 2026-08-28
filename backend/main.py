@@ -56,6 +56,31 @@ STAGE_CONFIG = [
     {"column": "SLA - MAC Set up", "label": "MAC Setup"},
 ]
 
+# Purely a presentation grouping of the 8 stages above into the 3 major
+# onboarding phases - does not change how any individual stage is
+# calculated. Every label here must match a STAGE_CONFIG label exactly.
+STAGE_GROUPS = [
+    {
+        "name": "Resource Requirements to Identification",
+        "stages": ["Resource Fulfilment"],
+    },
+    {
+        "name": "Identification to Onboarding",
+        "stages": [
+            "BGV Completion",
+            "FINRA Initiation Gap",
+            "FINRA Start to Courier End",
+            "Onboarding Docs Submission",
+            "Magnit Documentation",
+            "Docs Submission to PID",
+        ],
+    },
+    {
+        "name": "PID to Billing",
+        "stages": ["MAC Setup"],
+    },
+]
+
 GROUP_BY_COLUMN = "Project Details"
 TOTAL_DURATION_COLUMN = "Complete Onboarding"
 NAME_COLUMN = "Name"
@@ -319,6 +344,31 @@ def build_focus_areas(df: pd.DataFrame, stats: dict) -> list[dict]:
     return focus_areas
 
 
+def build_stage_groups(stage_summary: list[dict]) -> list[dict]:
+    """Rolls the flat per-stage summary up into the 3 major onboarding
+    phases defined in STAGE_GROUPS. Purely a presentation aggregation - the
+    underlying per-stage averages/anomaly counts (computed elsewhere) are
+    untouched, this just sums them per phase:
+      - a phase's 'average' is the sum of its sub-stages' averages (each
+        sub-stage average already represents days spent in that phase, so
+        summing gives total days for the phase as a whole)
+      - a phase's 'anomalyCount' is the sum of its sub-stages' anomaly
+        counts
+    """
+    by_label = {s["label"]: s for s in stage_summary}
+    groups = []
+    for group in STAGE_GROUPS:
+        sub_stages = [by_label[label] for label in group["stages"] if label in by_label]
+        averages = [s["average"] for s in sub_stages if s["average"] is not None]
+        groups.append({
+            "name": group["name"],
+            "average": int(round(sum(averages))) if averages else None,
+            "anomalyCount": sum(s["anomalyCount"] for s in sub_stages),
+            "subStages": sub_stages,
+        })
+    return groups
+
+
 @app.get("/api/candidates")
 def get_candidates(request: Request):
     full_df, _ = load_dataframe()
@@ -385,15 +435,19 @@ def get_summary(request: Request):
             "excludedBadData": data_quality.get(label, 0),
         })
 
+    total_duration_valid = (
+        df[TOTAL_DURATION_COLUMN].dropna()
+        if TOTAL_DURATION_COLUMN in df.columns
+        else pd.Series(dtype=float)
+    )
+
     kpis = {
         "totalCandidates": int(len(df)),
         "totalAnomalies": total_anomalies,
         "projectGroups": int(df[GROUP_BY_COLUMN].nunique()) if GROUP_BY_COLUMN in df.columns else 0,
-        "avgTotalOnboardingDays": (
-            round_out(df[TOTAL_DURATION_COLUMN].dropna().mean())
-            if TOTAL_DURATION_COLUMN in df.columns and not df[TOTAL_DURATION_COLUMN].dropna().empty
-            else None
-        ),
+        "avgTotalOnboardingDays": round_out(total_duration_valid.mean()) if not total_duration_valid.empty else None,
+        "minTotalOnboardingDays": round_out(total_duration_valid.min()) if not total_duration_valid.empty else None,
+        "maxTotalOnboardingDays": round_out(total_duration_valid.max()) if not total_duration_valid.empty else None,
         "dataQualityIssues": sum(data_quality.values()),
     }
 
@@ -405,6 +459,7 @@ def get_summary(request: Request):
     return {
         "kpis": kpis,
         "stages": stage_summary,
+        "stageGroups": build_stage_groups(stage_summary),
         "byGroup": by_group,
         "groupColumn": GROUP_BY_COLUMN,
         "filters": filters,
