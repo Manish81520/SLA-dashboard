@@ -37,6 +37,50 @@ function formatStageDeviationLabel(deviation) {
     return { label: `Behind by ${Math.abs(rounded)}d`, tone: 'behind' }
 }
 
+// Mirrors the backend's FOCUS_AREA_THRESHOLD (main.py) - a stage counts as
+// "at risk" once it's used up this fraction of its own global average,
+// matching the same definition already used for the dashboard's Focus Areas.
+const AT_RISK_RATIO = 0.75
+
+// Predicts where an in-progress candidate stands on their current stage,
+// using only data already on the candidate/stage records - no new backend
+// field. "Current stage" is the last stage with a live elapsed-day value;
+// stages after it are null because the candidate hasn't reached them yet.
+// That elapsed value doubles as "how long they've been in this stage," so
+// (stage average - elapsed) gives days remaining, projected from today.
+function predictCurrentStage(stageRows) {
+    let current = null
+    for (let i = stageRows.length - 1; i >= 0; i--) {
+        if (stageRows[i].value != null) {
+            current = stageRows[i]
+            break
+        }
+    }
+    if (!current || current.average == null) return null
+
+    const daysRemaining = current.average - current.value
+
+    if (daysRemaining < 0) {
+        const overdueDays = Math.abs(Math.round(daysRemaining))
+        return {
+            stageLabel: current.label,
+            text: `Overdue by ${overdueDays} day${overdueDays === 1 ? '' : 's'}`,
+            tone: 'overdue',
+        }
+    }
+
+    const predictedDate = new Date()
+    predictedDate.setDate(predictedDate.getDate() + Math.round(daysRemaining))
+    const formattedDate = predictedDate.toLocaleDateString('en-US', { day: 'numeric', month: 'short' })
+
+    const atRisk = current.value >= AT_RISK_RATIO * current.average
+    return {
+        stageLabel: current.label,
+        text: `Expected ${formattedDate}`,
+        tone: atRisk ? 'atRisk' : 'onTrack',
+    }
+}
+
 function MetaPill({ icon: Icon, label }) {
     return (
         <span className="flex items-center gap-1.5 text-caption text-gray-600">
@@ -46,7 +90,7 @@ function MetaPill({ icon: Icon, label }) {
     )
 }
 
-function StatusBanner({ isCompleted, completionDate, totalDays, status }) {
+function StatusBanner({ isCompleted, completionDate, totalDays, prediction }) {
     if (isCompleted) {
         return (
             <div className="flex items-start gap-3 bg-success/10 border border-success/20 rounded-card px-5 py-4 min-w-[260px]">
@@ -61,12 +105,34 @@ function StatusBanner({ isCompleted, completionDate, totalDays, status }) {
             </div>
         )
     }
+
+    // No live stage data yet (candidate hasn't started the first stage) -
+    // nothing to predict from, so fall back to a plain in-progress notice.
+    if (!prediction) {
+        return (
+            <div className="flex items-start gap-3 bg-primary-light/10 border border-primary-light/20 rounded-card px-5 py-4 min-w-[260px]">
+                <Clock size={20} className="text-primary mt-0.5 shrink-0" />
+                <div>
+                    <p className="text-small font-semibold text-primary m-0">Onboarding In Progress</p>
+                </div>
+            </div>
+        )
+    }
+
+    const toneStyles = {
+        onTrack: { bg: 'bg-primary-light/10', border: 'border-primary-light/20', text: 'text-primary', Icon: Clock },
+        atRisk: { bg: 'bg-warning/10', border: 'border-warning/20', text: 'text-warning', Icon: AlertTriangle },
+        overdue: { bg: 'bg-accent-red/10', border: 'border-accent-red/20', text: 'text-accent-red', Icon: AlertTriangle },
+    }
+    const { bg, border, text, Icon } = toneStyles[prediction.tone]
+
     return (
-        <div className="flex items-start gap-3 bg-primary-light/10 border border-primary-light/20 rounded-card px-5 py-4 min-w-[260px]">
-            <Clock size={20} className="text-primary mt-0.5 shrink-0" />
+        <div className={`flex items-start gap-3 ${bg} border ${border} rounded-card px-5 py-4 min-w-[260px]`}>
+            <Icon size={20} className={`${text} mt-0.5 shrink-0`} />
             <div>
-                <p className="text-small font-semibold text-primary m-0">Onboarding In Progress</p>
-                <p className="text-caption text-gray-600 mt-1 m-0">Current status: {status ?? 'Unspecified'}</p>
+                <p className={`text-small font-semibold ${text} m-0`}>
+                    {prediction.stageLabel} · {prediction.text}
+                </p>
             </div>
         </div>
     )
@@ -136,6 +202,10 @@ function MetricRow({ icon: Icon, label, value, tone = 'default' }) {
 }
 
 function KeyMetrics({ totalDays, avgDays, deviation, anomalyCount }) {
+    const deviationDisplay = deviation != null ? formatStageDeviationLabel(deviation) : null
+    const deviationTone =
+        deviationDisplay?.tone === 'ahead' ? 'success' : deviationDisplay?.tone === 'behind' ? 'breach' : 'default'
+
     return (
         <div className="bg-surface border border-border rounded-card shadow-card p-6 flex flex-col gap-4">
             <p className="text-title font-bold text-gray-900 m-0">Key Metrics Summary</p>
@@ -143,9 +213,9 @@ function KeyMetrics({ totalDays, avgDays, deviation, anomalyCount }) {
             <MetricRow icon={Layers} label="Team Average" value={avgDays != null ? `${avgDays} days` : '—'} />
             <MetricRow
                 icon={deviation != null && deviation < 0 ? TrendingDown : TrendingUp}
-                label="Deviation from Average"
-                value={deviation != null ? `${deviation >= 0 ? '+' : ''}${deviation} days` : '—'}
-                tone={deviation != null ? (deviation >= 0 ? 'success' : 'breach') : 'default'}
+                label="Pace vs Team Average"
+                value={deviationDisplay ? deviationDisplay.label : '—'}
+                tone={deviationTone}
             />
             <MetricRow
                 icon={AlertTriangle}
@@ -189,6 +259,7 @@ export default function CandidateDetail({ candidate, stages, kpis, onBack }) {
     })
 
     const anomalyCount = stageRows.filter((s) => s.isAnomaly === true).length
+    const stagePrediction = isCompleted ? null : predictCurrentStage(stageRows)
 
     const summaryMessage =
         anomalyCount > 0
@@ -228,7 +299,7 @@ export default function CandidateDetail({ candidate, stages, kpis, onBack }) {
                     isCompleted={isCompleted}
                     completionDate={completionDateRaw}
                     totalDays={totalDays}
-                    status={status}
+                    prediction={stagePrediction}
                 />
             </div>
 

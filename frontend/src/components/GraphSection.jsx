@@ -26,6 +26,7 @@ export default function GraphSection({ stages, byGroup }) {
     }, [stages, byGroup])
 
     const [activeId, setActiveId] = useState(registry[0]?.id)
+    const chartMinWidth = Math.max((byGroup?.length ?? 0) * 90, 100)
 
     if (registry.length === 0) return null
 
@@ -76,8 +77,10 @@ export default function GraphSection({ stages, byGroup }) {
                 </div>
             </div>
 
-            <div className="px-6 py-6">
-                {activeGraph.render()}
+            <div className="px-6 py-6 overflow-x-auto overscroll-contain">
+                <div style={{ minWidth: chartMinWidth }}>
+                    {activeGraph.render()}
+                </div>
             </div>
         </div>
     )
