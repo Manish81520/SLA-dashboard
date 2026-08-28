@@ -56,8 +56,8 @@ export default function FocusAreas({ focusAreas, candidates, onSelectCandidate }
     return (
         <div className="bg-surface border border-border rounded-card shadow-card overflow-hidden">
             <div className="flex items-center gap-3 px-6 py-4 border-b border-border">
-                <div className="w-9 h-9 rounded-button bg-accent-red/10 flex items-center justify-center shrink-0">
-                    <AlertTriangle size={18} className="text-accent-red" />
+                <div className="w-9 h-9 rounded-button bg-warning/10 flex items-center justify-center shrink-0">
+                    <AlertTriangle size={18} className="text-warning" />
                 </div>
                 <div>
                     <p className="text-title font-bold text-gray-900 m-0 leading-tight">Focus Areas</p>
@@ -73,11 +73,11 @@ export default function FocusAreas({ focusAreas, candidates, onSelectCandidate }
                         onClick={() => handleCardClick(stage)}
                         className={`flex items-center justify-between gap-3 min-w-[220px] text-left px-4 py-3 rounded-button border transition-colors ${activeStage === stage
                             ? 'border-primary bg-primary/5'
-                            : 'border-accent-red/20 bg-accent-red/5 hover:bg-accent-red/10'
+                            : 'border-warning/20 bg-warning/5 hover:bg-warning/10'
                             }`}
                     >
                         <div className="flex items-center gap-3 min-w-0">
-                            <span className="text-title font-bold text-accent-red shrink-0">{count}</span>
+                            <span className="text-title font-bold text-gray-900 shrink-0">{count}</span>
                             <div className="min-w-0">
                                 <p className="text-small font-semibold text-gray-900 m-0 truncate">{stage}</p>
                                 <p className="text-caption text-gray-500 m-0">Approaching SLA breach</p>

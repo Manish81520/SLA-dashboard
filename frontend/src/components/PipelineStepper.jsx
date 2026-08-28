@@ -49,10 +49,7 @@ export default function PipelineStepper({ stageGroups }) {
 
           return (
             <div key={group.name} className="flex items-stretch flex-1 lg:min-w-0">
-              <div
-                className={`flex-1 rounded-button border overflow-hidden ${hasAnomalies ? 'border-accent-red/20 bg-accent-red/5' : 'border-border bg-surface'
-                  }`}
-              >
+              <div className="flex-1 rounded-button border border-border bg-surface overflow-hidden">
                 <button
                   type="button"
                   onClick={() => toggleGroup(group.name)}
@@ -71,7 +68,7 @@ export default function PipelineStepper({ stageGroups }) {
                   </div>
 
                   <div className="flex items-baseline gap-1.5">
-                    <span className={`text-xl font-bold leading-none ${hasAnomalies ? 'text-accent-red' : 'text-gray-900'}`}>
+                    <span className="text-xl font-bold leading-none text-gray-900">
                       {group.average ?? '—'}
                     </span>
                     <span className="text-[10px] text-gray-500">avg days</span>
