@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, useCallback } from 'react'
-import { Download, Loader2, AlertCircle, ShieldAlert, Activity } from 'lucide-react'
+import { Download, Loader2, AlertCircle, ShieldAlert, Activity, BookOpen } from 'lucide-react'
 import { fetchSummary, fetchCandidates, exportUrl } from './api'
 
 import PipelineStepper from './components/PipelineStepper'
@@ -12,6 +12,7 @@ import AnomalyWatchlist from './components/Anomalywatchlist'
 import CandidateTable from './components/CandidateTable'
 import CandidateSearchBar from './components/CandidateSearchBar'
 import CandidateDetail from './components/CandidateDetail'
+import GlossaryDrawer from './components/GlossaryDrawer'
 
 export default function App() {
   const [summary, setSummary] = useState(null)
@@ -19,6 +20,7 @@ export default function App() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [activeFilters, setActiveFilters] = useState({})
+  const [glossaryOpen, setGlossaryOpen] = useState(false)
 
   // 'dashboard' (filters + KPIs + table) or 'detail' (single candidate).
   const [view, setView] = useState('dashboard')
@@ -193,6 +195,17 @@ export default function App() {
 
                 <KpiCards kpis={summary.kpis} />
 
+                <div className="flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() => setGlossaryOpen(true)}
+                    className="flex items-center gap-1.5 text-caption font-medium text-primary hover:underline"
+                  >
+                    <BookOpen size={13} />
+                    What do these metrics mean?
+                  </button>
+                </div>
+
                 <PipelineStepper stageGroups={summary.stageGroups} />
 
                 <FocusAreas
@@ -224,6 +237,11 @@ export default function App() {
           </div>
         )}
       </main>
+      <GlossaryDrawer
+        isOpen={glossaryOpen}
+        onClose={() => setGlossaryOpen(false)}
+        stageGroups={summary?.stageGroups}
+      />
     </div>
   )
 }
