@@ -12,11 +12,9 @@ export const PIPELINE_GLOSSARY = {
     'Resource Requirements to Identification': {
         definition:
             'Time taken from when resource requirements are raised for a partner to when the partner is identified as a fit. Includes sourcing, initial vetting, and shortlisting activities.',
-        example:
-            'If resource requirements are raised on Jan 1 and a partner is identified on Jan 18, the stage duration is 17 days.',
         subStages: {
             'Resource Fulfilment':
-                'Time taken to fulfil the required resources for the partner. Includes resource allocation and confirmation.',
+                'Time taken to assign a resource once the requirement is raised.',
         },
     },
     'Identification to Onboarding': {
@@ -24,17 +22,17 @@ export const PIPELINE_GLOSSARY = {
             'The core onboarding phase - from confirming a partner through background verification, regulatory registration, and documentation, up to the point they are ready for setup.',
         subStages: {
             'BGV Completion':
-                "Time taken to complete the partner's background verification (BGV), from kickoff to a confirmed result.",
+                "Time taken to complete the partner's background verification (BGV).",
             'FINRA Initiation Gap':
-                'Time between BGV completion and the start of the FINRA registration process for the partner.',
+                'Time taken from resource allocation to the start of FINRA registration.',
             'FINRA Start to Courier End':
-                'Time from FINRA registration start to completion of the related courier/paperwork handoff.',
+                'Time taken from FINRA registration start to completion of the courier handoff.',
             'Onboarding Docs Submission':
-                'Time taken for the partner to submit all required onboarding documents.',
+                'Time taken for the partner to submit onboarding documents after being assigned.',
             'Magnit Documentation':
-                'Time taken to complete documentation required in the Magnit vendor management system.',
+                'Time taken to complete Magnit documentation after documents are submitted.',
             'Docs Submission to PID':
-                'Time from document submission to the partner receiving their Project ID (PID).',
+                'Time taken to receive the Project ID (PID) after documents are submitted.',
         },
     },
     'PID to Billing': {
@@ -42,7 +40,7 @@ export const PIPELINE_GLOSSARY = {
             'The final phase - from a partner receiving their Project ID to being fully set up and billable on the project.',
         subStages: {
             'MAC Setup':
-                'Time taken to complete the partner\'s system access and account setup (MAC) once they have a Project ID.',
+                'Time taken to complete MAC setup after the partner receives their PID.',
         },
     },
 }
